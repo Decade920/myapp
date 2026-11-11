@@ -1,0 +1,15 @@
+# yaml-language-server: $schema:none
+
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent
+
+default:
+  nginx:
+    replicaCount: 1
+    image:
+      repository: nginx
+      tag: latest
+    service:
+      port: 80
+      nodePort: 30001

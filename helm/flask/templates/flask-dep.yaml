@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=none
+# 生成flask-pyhton应用的deploment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-deployment
+spec:
+  replicas: {{ .Values.default.flask.replicaCount}}
+  selector:
+    matchLabels:
+      app: flask-app
+  template:
+    metadata:
+      labels:
+        app: flask-app
+    spec:
+      imagePullSecrets: 
+          - name: {{ .Values.default.flask.image.pullSecrets | first }}
+      containers:
+      - name: flask-app
+        image: "{{ .Values.default.flask.image.repository }}:{{ .Values.default.flask.image.tag }}"
+        # imagePullPolicy: "{{ .Values.global.imagePullPolicy }}"
+        # command: ["sleep","99999"]
+        ports:
+        - containerPort: {{ .Values.default.flask.service.port }}
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        env:
+          - name: REDIS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: REDIS_HOST
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: REDIS_PORT
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: DB_HOST
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: mysql-secret
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: flask-config
+                key: DB_NAME
+          - name: RABBITMQ_HOST
+            value: "rabbitmq-service"
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_USER
+            value: "admin"
+          - name: RABBITMQ_PASSWORD
+            value: "admin123"
+      terminationGracePeriodSeconds: 30
+---
+# 生成flask-python应用的service
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  labels:
+    app: flask-app
+spec:
+  selector:
+    app: flask-app
+  ports:
+    - protocol: TCP
+      name: http
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+---
+# 生成flask-python应用的configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flask-config
+data:
+  REDIS_HOST: "{{ .Values.default.flask.configmap.REDIS_HOST}}"
+  REDIS_PORT: "{{ .Values.default.flask.configmap.REDIS_PORT}}"
+  DB_HOST: "{{ .Values.default.flask.configmap.DB_HOST}}"
+  DB_USER: "{{ .Values.default.flask.configmap.DB_USER}}"
+  DB_NAME: "{{ .Values.default.flask.configmap.DB_NAME}}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+stringData:
+  password: "{{ .Values.default.flask.secret.DB_PASSWORD}}"

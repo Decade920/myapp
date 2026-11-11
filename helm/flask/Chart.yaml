@@ -1,0 +1,7 @@
+# yaml-language-server: $schema:none
+apiVersion: v2
+name: flask
+description: A Helm chart for Flask Application
+type: application
+version: 0.1.0
+appVersion: "7.0"

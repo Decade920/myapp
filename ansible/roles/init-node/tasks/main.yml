@@ -1,0 +1,31 @@
+# yaml-language-server: $schema:https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+
+- name: 关闭swap
+  command: swapoff -a
+  changed_when: false
+
+- name: 永久关闭swap
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+
+- name: 加载overlay、br_netfilter模块
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - overlay
+    - br_netfilter
+
+- name: 配置内核参数，使用ansible.posix.sysctl模块，保存到独立文件99-kubernetes.conf
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    reload: yes
+    sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+  loop:
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: 1 }
+    - { name: "net.bridge.bridge-nf-call-iptables", value: 1 }
+    - { name: "net.ipv4.ip_forward", value: 1 }

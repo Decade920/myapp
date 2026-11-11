@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flask-alerts
+  namespace: monitoring
+  labels:
+    release: app-monitoring
+spec:
+  groups:
+    - name: flask.rules
+      rules:
+        - alert: FlaskPodNotRunning
+          expr: (sum(kube_pod_status_phase{namespace="default", phase="Running", pod=~"flask-deployment.*"}) or vector(0)) == bool 0
+          for: 0s
+          labels:
+            severity: critical
+          annotations:
+            summary: "Flask没有任何Running的Pod"
+            description: "Flask 应用已彻底死机，请立即检查！"

@@ -1,0 +1,40 @@
+# yaml-language-server: $schema:None
+alloy:
+  configMap:
+    create: true
+    content: |
+      // 发现 K8s 节点上所有的 Pod
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // 提取 Pod 的标签（namespace, pod, container）
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+      }
+
+      // 读取 Pod 日志
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // 发送到新部署的 Loki 服务
+      loki.write "default" {
+        endpoint {
+          url = "http://app-loki:3100/loki/api/v1/push"
+          tenant_id = "alloy"
+        }
+      }

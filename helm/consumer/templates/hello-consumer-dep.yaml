@@ -1,0 +1,23 @@
+# 生成pod名为hello-consumer的deployment.yaml文件
+# yaml-language-server: $schema:none
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-consumer-deployment
+spec:
+  selector:
+    matchLabels:
+      app: hello-consumer
+  replicas: {{ .Values.default.hello_consumer.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: hello-consumer
+    spec:
+      imagePullSecrets: 
+            - name: {{ .Values.default.hello_consumer.image.pullSecrets | first }}
+      containers:
+        - name: hello-consumer
+          image: "{{ .Values.default.hello_consumer.image.repository }}:{{ .Values.default.hello_consumer.image.tag }}"
+          # imagePullPolicy: "{{ .Values.global.imagePullPolicy }}"
+          

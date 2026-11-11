@@ -1,0 +1,14 @@
+# Mysql Values
+# yaml-language-server: $schema:none
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent
+default:
+  mysql:
+    replicas: 1
+    image:
+      repository: mysql
+      tag: "8.0"
+    storage: 5Gi
+    limitMemory: "600Mi"
+    lowMemory: "256Mi"

@@ -1,0 +1,47 @@
+name: Consumer CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/consumer/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        run: |
+          git clone http://git-admin:${{ secrets.GIT_TOKEN }}@192.168.148.129:30300/git-admin/myapp-config.git .
+      - name: Login to Tencent Cloud
+        run: |
+          echo "${{ secrets.TCR_PASSWORD }}" | docker login ccr.ccs.tencentyun.com --username "${{ secrets.TCR_USERNAME }}" --password-stdin
+
+      - name: Build and Push Docker Image to Tencent Cloud
+        run: |
+          # TAG=$(git rev-parse --short HEAD)
+          TAG=v-$(echo ${{ gitea.sha }} | cut -c1-7)
+          IMAGE=ccr.ccs.tencentyun.com/myapp-tencent/hello-consumer:$TAG
+          docker build -t $IMAGE ./apps/consumer/
+          docker push $IMAGE
+          echo "NEW_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Update values.yaml
+        run: |
+          cd helm/consumer
+          sed -i "s|tag: .*|tag: ${{ env.NEW_TAG }}|g" values.yaml
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "Gitea Actions"
+          git config --global user.email "actions@gitea.local"
+          git add helm/consumer/values.yaml
+
+          # 如果values.yaml内容有变化才commit，避免死循环
+          git diff --staged --quiet || git commit -m "chore: update consumer image tag to ${{ env.NEW_TAG }} [skip ci]"
+
+          # 使用gitea token推送，修改远程地址（替换成我的IP和用户名）
+          git remote set-url origin http://git-admin:${{ secrets.GIT_TOKEN }}@192.168.148.129:30300/git-admin/myapp-config.git
+          git push origin main

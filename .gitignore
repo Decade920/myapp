@@ -1,0 +1,35 @@
+# 敏感文件
+*.tfvars
+
+!envs/dev/terraform.tfvars
+!envs/prod/terraform.tfvars
+
+# Terraform 状态文件
+*.tfstate
+*.tfstate.backup
+
+# Terraform 插件目录
+.terraform/
+
+# 保留 lock 文件（应该提交）
+!.terraform.lock.hcl
+
+# 忽略备份文件
+*.bakup
+
+# 忽略ansible inventory目录、group_vars、host_vars目录
+ansible/inventory/hosts
+ansible/group_vars/all/vaults.yml
+ansible/host_vars/*/vaults.yml
+ansible/ansible/*.retry
+ansible/.ansible/
+ansible/ansible/*.log
+
+# 暂时忽略terraform目录，目前只在本地部署，暂时不用腾讯云服务器
+terraform/**
+
+# 忽略helm/temp/所有文件
+helm/temp/**
+
+# 忽略工具文件夹
+tools/**

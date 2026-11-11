@@ -1,0 +1,14 @@
+# yaml-language-server: $schema:none
+
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent
+
+default:
+  hello_consumer:
+      replicaCount: 1
+      image:
+        repository: ccr.ccs.tencentyun.com/myapp-tencent/hello-consumer
+        tag: 8d91bc7
+        pullSecrets:
+          - tcr-secret

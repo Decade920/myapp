@@ -1,0 +1,9 @@
+# yaml-language-server: $schema:https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+- name: 读取 master 生成的join命令
+  set_fact:
+    join_command: "{{ lookup('file', '/tmp/k8s_join_command') }}"
+
+- name: 加入集群
+  shell: "{{ join_command }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf

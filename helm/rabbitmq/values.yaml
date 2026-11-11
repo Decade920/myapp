@@ -1,0 +1,5 @@
+# yaml-language-server: $schema:none
+
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent

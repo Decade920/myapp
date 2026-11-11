@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=none
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent
+default:
+  redis:
+    replicaCount: 1
+    image:
+      repository: public.ecr.aws/docker/library/redis
+      tag: 8.2.3-alpine

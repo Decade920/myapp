@@ -1,0 +1,127 @@
+# yaml-language-server: $schema:https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+- name: 初始化 Master节点（国内源）
+  shell: |
+    kubeadm init \
+      --apiserver-advertise-address={{ ansible_facts['default_ipv4']['address'] }} \
+      --pod-network-cidr=10.244.0.0/16 \
+      --image-repository=registry.aliyuncs.com/google_containers
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: 创建root用户的 .kube 目录
+  ansible.builtin.file:
+    path: /root/.kube
+    state: directory
+    mode: "0755"
+
+- name: 将 admin.conf 复制为root用户的 kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: yes
+    mode: "0600"
+
+- name: 下载 Calico 安装清单
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/{{ item }}"
+    dest: "/tmp/{{ item }}"
+    mode: "0644"
+    timeout: 60
+  loop:
+    - tigera-operator.yaml
+    - custom-resources.yaml
+    - operator-crds.yaml
+  register: calico_result
+  until: calico_result is succeeded
+  retries: 3
+  delay: 5
+
+# - name: 替换Calico镜像地址为阿里云源
+#   ansible.builtin.replace:
+#     path: "/tmp/{{ item }}"
+#     regexp: 'docker\.io/calico/'
+#     replace: "registry.aliyuncs.com/calico/"
+#   loop:
+#     - tigera-operator.yaml
+#     - custom-resources.yaml
+#     - operator-crds.yaml
+
+- name: 替换calico镜像地址为华为云
+  ansible.builtin.shell: |
+    kubectl patch installation default --type merge -p '{"spec":{"registry":"swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io"}}'
+  register: calico_patch_result
+  until: calico_patch_result.rc == 0
+  retries: 5
+  delay: 5
+
+- name: 修改custom-resources.yaml中的pod网段
+  ansible.builtin.replace:
+    path: "/tmp/custom-resources.yaml"
+    regexp: 'cidr:\s+192\.168\.0\.0/16'
+    replace: "cidr: 10.244.0.0/16"
+
+- name: 依次应用Calico清单
+  ansible.builtin.shell: "kubectl apply --server-side --force-conflicts -f /tmp/{{ item }}"
+  loop:
+    - tigera-operator.yaml
+    - custom-resources.yaml
+    - operator-crds.yaml
+
+- name: 获取加入集群的token
+  shell: kubeadm token create --print-join-command
+  register: join_command
+
+- name: 将join命令写入文件（供worker节点使用）
+  copy:
+    content: "{{ join_command.stdout }}"
+    dest: /tmp/join_command.sh
+  delegate_to: localhost
+  become: false
+
+- name: 允许pod调度到master节点（移除污点）
+  shell: kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+  register: taint_result
+  failed_when:
+    - taint_result.rc != 0
+    - "'not found' not in taint_result.stderr and 'not found' not in taint_result.stdout"
+  changed_when: taint_result.rc == 0
+
+# 自己写的，不够严谨
+# - name: 在diend家目录下新建.kube
+#   file:
+#     path: "{{ diend_home }}/.kube"
+#     state: directory
+#   become: false
+
+# - name: 将kubeconfig文件复制到diend家目录下
+#   copy:
+#     src: /etc/kubernetes/admin.conf
+#     dest: "{{ diend_home }}/.kube/k8s-master_config"
+#   become: true
+#   args:
+#     creates: "{{ diend_home }}/.kube/k8s-master_config"
+
+# - name: 修改复制的kubeconfig文件的权限
+#   file:
+#     path: "{{ diend_home }}/.kube/k8s-master_config"
+#     owner: "{{ diend_user }}"
+#   become: true
+
+- name: 创建diend用户下的.kube目录
+  file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: 复制kubeconfig并设置正确权限
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0600"
+  become: true

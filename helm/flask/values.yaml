@@ -1,0 +1,25 @@
+# yaml-language-server: $schema:none
+global:
+  namespace: default
+  imagePullPolicy: IfNotPresent
+
+# default 命名空间的服务配置
+default:
+  default:
+  flask:
+    replicaCount: 1
+    image:
+      repository: ccr.ccs.tencentyun.com/myapp-tencent/flask-app
+      tag: v-113afd5
+      pullSecrets:
+        - tcr-secret
+    service:
+      port: 5000
+    configmap:
+      REDIS_HOST: redis-service
+      DB_HOST: mysql-service
+      DB_USER: root
+      DB_NAME: myapp
+      REDIS_PORT: "6379"
+    secret:
+      DB_PASSWORD: root123

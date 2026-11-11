@@ -1,0 +1,31 @@
+# yaml-language-server: $schema:https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+- name: 安装containerd
+  apt:
+    name: containerd
+    state: present
+    update_cache: yes
+
+- name: 创建 containerd 目录
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: 生成默认配置
+  shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+
+- name: 修改cgroup驱动为systemd
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    line: 'SystemdCgroup = true'
+    state: present
+  notify: 重启 containerd
+
+- name: 启动并设置开机自启
+  systemd:
+    name: containerd
+    enabled: yes
+    state: started

@@ -1,0 +1,7 @@
+# yaml-language-server: $schema: none
+apiVersion: v2
+name: mysql
+description: A Helm chart for MySQL Database
+type: application
+version: 0.1.0
+appVersion: "8.0"

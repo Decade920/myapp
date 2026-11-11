@@ -1,0 +1,14 @@
+# yaml-language-server: $schema:https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json
+- name: 初始化集群
+  hosts: k8s_cluster
+  become: yes
+  roles:
+    - init-node
+    - containerd
+    - kubeadm
+
+- name: 初始化 master 节点
+  hosts: k8s_master
+  become: yes
+  roles:
+    - master

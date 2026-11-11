@@ -1,0 +1,7 @@
+# yaml-language-server: $schema:none
+apiVersion: v2
+name: rabbitmq
+description: A Helm chart for RabbitMQ message queue
+type: application
+version: 0.1.0
+appVersion: "3.13"
